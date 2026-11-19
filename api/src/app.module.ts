@@ -7,10 +7,12 @@ import { User } from './users/user.entity.js';
 import { Instrument } from './instruments/instrument.entity.js';
 import { Order } from './orders/order.entity.js';
 import { MarketData } from './marketdata/marketdata.entity.js';
+import { InstrumentsModule } from './instruments/instruments.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    InstrumentsModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
