@@ -6,6 +6,7 @@ import { MarketData } from '../marketdata/marketdata.entity.js';
 import { CreateOrderDto } from './dto/create-order.dto.js';
 import { OrderStatus } from '../common/enums/order-status.enum.js';
 import { OrderType } from '../common/enums/order-type.enum.js';
+import { OrderSide } from '../common/enums/order-side.enum.js';
 
 @Injectable()
 export class OrdersService {
@@ -43,6 +44,8 @@ export class OrdersService {
       throw new BadRequestException('Insufficient totalAmount for at least 1 share at current price');
     }
 
+    const status = await this.validateOrder(dto, price, size);
+
     const order = this.orderRepo.create({
       userId: dto.userId,
       instrumentId: dto.instrumentId,
@@ -50,7 +53,7 @@ export class OrdersService {
       type: dto.type,
       price,
       size,
-      status: OrderStatus.FILLED,
+      status,
       datetime: new Date(),
     });
 
@@ -64,6 +67,8 @@ export class OrdersService {
       throw new BadRequestException('Insufficient totalAmount for at least 1 share at given price');
     }
 
+    const status = await this.validateOrder(dto, dto.price, size);
+
     const order = this.orderRepo.create({
       userId: dto.userId,
       instrumentId: dto.instrumentId,
@@ -71,11 +76,58 @@ export class OrdersService {
       type: dto.type,
       price: dto.price,
       size,
-      status: OrderStatus.NEW,
+      status: status === OrderStatus.FILLED ? OrderStatus.NEW : status,
       datetime: new Date(),
     });
 
     return this.orderRepo.save(order);
+  }
+
+  private async validateOrder(dto: CreateOrderDto, price: number, size: number): Promise<OrderStatus> {
+    if (dto.side === OrderSide.BUY) {
+      const availableCash = await this.getAvailableCash(dto.userId);
+      const orderCost = size * price;
+      if (orderCost > availableCash) {
+        return OrderStatus.REJECTED;
+      }
+    } else if (dto.side === OrderSide.SELL) {
+      const availableShares = await this.getAvailableShares(dto.userId, dto.instrumentId);
+      if (size > availableShares) {
+        return OrderStatus.REJECTED;
+      }
+    }
+    return OrderStatus.FILLED;
+  }
+
+  private async getAvailableCash(userId: number): Promise<number> {
+    const result = await this.orderRepo
+      .createQueryBuilder('o')
+      .select(`
+        COALESCE(SUM(CASE WHEN o.side = 'CASH_IN' THEN o.size * o.price ELSE 0 END), 0)
+        - COALESCE(SUM(CASE WHEN o.side = 'CASH_OUT' THEN o.size * o.price ELSE 0 END), 0)
+        - COALESCE(SUM(CASE WHEN o.side = 'BUY' THEN o.size * o.price ELSE 0 END), 0)
+        + COALESCE(SUM(CASE WHEN o.side = 'SELL' THEN o.size * o.price ELSE 0 END), 0)
+      `, 'cash')
+      .where('o.userId = :userId', { userId })
+      .andWhere('o.status = :status', { status: OrderStatus.FILLED })
+      .getRawOne();
+
+    return Number(result?.cash ?? 0);
+  }
+
+  private async getAvailableShares(userId: number, instrumentId: number): Promise<number> {
+    const result = await this.orderRepo
+      .createQueryBuilder('o')
+      .select(`
+        COALESCE(SUM(CASE WHEN o.side = 'BUY' THEN o.size ELSE 0 END), 0)
+        - COALESCE(SUM(CASE WHEN o.side = 'SELL' THEN o.size ELSE 0 END), 0)
+      `, 'shares')
+      .where('o.userId = :userId', { userId })
+      .andWhere('o.instrumentId = :instrumentId', { instrumentId })
+      .andWhere('o.status = :status', { status: OrderStatus.FILLED })
+      .getRawOne();
+
+    return Number(result?.shares ?? 0);
   }
 
   private async getLatestMarketData(instrumentId: number): Promise<MarketData | null> {
