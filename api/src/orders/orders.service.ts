@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from './order.entity.js';
@@ -128,6 +128,18 @@ export class OrdersService {
       .getRawOne();
 
     return Number(result?.shares ?? 0);
+  }
+
+  async cancel(orderId: number): Promise<Order> {
+    const order = await this.orderRepo.findOne({ where: { id: orderId } });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+    if (order.status !== OrderStatus.NEW) {
+      throw new BadRequestException(`Only NEW orders can be cancelled, current status: ${order.status}`);
+    }
+    order.status = OrderStatus.CANCELLED;
+    return this.orderRepo.save(order);
   }
 
   private async getLatestMarketData(instrumentId: number): Promise<MarketData | null> {
