@@ -13,13 +13,23 @@ export class InstrumentsService {
     private readonly marketDataRepo: Repository<MarketData>,
   ) {}
 
-  async search(query: string) {
-    const instruments = await this.instrumentRepo
+  async search(query: string, limit?: number, offset?: number) {
+    const qb = this.instrumentRepo
       .createQueryBuilder('i')
-      .where('i.ticker ILIKE :q OR i.name ILIKE :q', { q: `%${query}%` })
-      .getMany();
+      .where('i.ticker ILIKE :q OR i.name ILIKE :q', { q: `%${query}%` });
 
-    const results = await Promise.all(
+    const total = await qb.getCount();
+
+    if (offset !== undefined) {
+      qb.skip(offset);
+    }
+    if (limit !== undefined) {
+      qb.take(limit);
+    }
+
+    const instruments = await qb.getMany();
+
+    const data = await Promise.all(
       instruments.map(async (instrument) => {
         const md = await this.getLatestMarketData(instrument.id);
         return {
@@ -36,7 +46,7 @@ export class InstrumentsService {
       }),
     );
 
-    return results;
+    return { data, total };
   }
 
   async getLatestMarketData(instrumentId: number): Promise<MarketData | null> {
