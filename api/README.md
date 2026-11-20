@@ -1,132 +1,163 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Cocos Trading API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+REST API for a simplified stock trading platform. Users can search instruments, submit buy/sell orders, and view their portfolio.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Tech Stack
 
-## Description
+| Layer            | Technology                          |
+|------------------|-------------------------------------|
+| Framework        | NestJS (TypeScript)                 |
+| ORM              | TypeORM                             |
+| Database         | PostgreSQL 15                       |
+| Validation       | class-validator + class-transformer |
+| Testing          | Vitest + Supertest                  |
+| Containerization | Docker + Docker Compose             |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Prerequisites
 
-## Project setup
+- **Node.js** >= 20
+- **Docker** and **Docker Compose**
 
-```bash
-$ npm install
+## Setup
+
+1. **Start PostgreSQL**
+
+   ```bash
+   docker-compose up -d db
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment variables**
+
+   Create a `.env` file in the project root (or export the variables directly):
+
+   | Variable      | Default     | Description              |
+   |---------------|-------------|--------------------------|
+   | `DB_HOST`     | `localhost` | PostgreSQL host          |
+   | `DB_PORT`     | `5432`      | PostgreSQL port          |
+   | `DB_USER`     | `cocos`     | PostgreSQL user          |
+   | `DB_PASSWORD` | `cocos123`  | PostgreSQL password      |
+   | `DB_NAME`     | `cocosdb`   | PostgreSQL database name |
+
+4. **Start the API in development mode**
+
+   ```bash
+   npm run start:dev
+   ```
+
+   The API will be available at `http://localhost:3000`.
+
+   Alternatively, run everything via Docker Compose:
+
+   ```bash
+   docker-compose up -d
+   ```
+
+## API Endpoints
+
+All endpoints are prefixed with `/api`.
+
+### Search Instruments
+
+```
+GET /api/instruments/search?q=<query>&limit=<n>&offset=<n>
 ```
 
-## Compile and run the project
+Search instruments by ticker or name (case-insensitive). `limit` and `offset` are optional pagination parameters.
 
-```bash
-# development
-$ npm run start
+### Submit Order
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```
+POST /api/orders
 ```
 
-## Run tests
+Request body:
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```json
+{
+  "userId": 1,
+  "instrumentId": 5,
+  "side": "BUY",
+  "type": "MARKET",
+  "quantity": 10
+}
 ```
 
-## Deployment
+- `side`: `BUY`, `SELL`, `CASH_IN`, or `CASH_OUT`
+- `type`: `MARKET` or `LIMIT`
+- Provide either `quantity` (number of shares) or `totalAmount` (pesos to invest). They are mutually exclusive.
+- `price` is required only for `LIMIT` orders.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Cancel Order
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```
+PATCH /api/orders/:id/cancel
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Only orders with status `NEW` (i.e., pending LIMIT orders) can be cancelled.
 
-## Observability
+### Get Portfolio
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project, run this and approve the code it prints at [observe.nestjs.com/link](https://observe.nestjs.com/link) - signing up for free if you have no account:
-
-```bash
-$ npx @nestjs/observe link
+```
+GET /api/portfolio/:userId
 ```
 
-It installs `@nestjs/observe`, wires it into `AppModule` and `main.ts`, and writes the app key and secret into `.env`, which every `nest start` script (`start`, `start:dev`, `start:debug`) then loads. In production, set `OBSERVE_APP_KEY` and `OBSERVE_APP_SECRET` in the environment instead.
+Returns total account value, available cash, and all instrument positions with market value and return percentage.
 
-Or do it by hand:
+## Running Tests
+
+**Unit tests:**
 
 ```bash
-$ npm install @nestjs/observe
+npm test
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/sdk) - it takes a single import and an app key.
+**End-to-end tests:**
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+```bash
+npm run test:e2e
+```
 
-## Resources
+**Coverage report:**
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+npm run test:cov
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Design Decisions
 
-## Support
+Key architectural and engineering decisions are documented in detail:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** -- Module structure, database schema, API contracts, order flow, and calculation logic.
+- **[docs/TRADE-OFFS.md](docs/TRADE-OFFS.md)** -- Technical trade-offs for ORM choice, position calculation strategy, search implementation, validation layers, monetary precision, and testing approach.
 
-## Stay in touch
+A brief summary of the most important decisions:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- **Positions calculated on-the-fly** from FILLED orders rather than stored in a separate table. Simpler, always consistent, and sufficient for the expected data volume.
+- **TypeORM** chosen for native NestJS integration and mature ecosystem.
+- **ILIKE-based search** for simplicity given the small instrument list. Can be upgraded to pg_trgm trigram matching if fuzzy search is needed.
+- **Database transactions with row-level locking** to prevent race conditions during order validation (e.g., double-spending cash).
+- **PostgreSQL NUMERIC(18,2)** for all monetary values to avoid floating-point precision issues.
 
-## License
+## Assumptions
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+The following assumptions were made where the specification was ambiguous:
+
+1. **User identification**: `userId` is passed in the request body for `POST /api/orders` and as a path parameter for `GET /api/portfolio/:userId`. No authentication or authorization layer is implemented.
+
+2. **MARKET order pricing**: MARKET orders use the latest `close` price from the `marketdata` table as the execution price.
+
+3. **REJECTED orders persist calculated values**: When an order is rejected (insufficient cash or shares), it is still saved to the database with the calculated `price` and `size` values for auditability.
+
+4. **No short selling**: SELL orders are rejected if the user does not hold enough shares of the instrument. Negative positions are not allowed.
+
+5. **CASH_IN / CASH_OUT modeling**: Cash operations use `instrumentId=66` (the ARS/MONEDA instrument), `price=1`, and `size=amount`. This allows cash movements to be treated uniformly as orders within the same calculation logic.
+
+6. **LIMIT orders stay NEW**: LIMIT orders are created with status `NEW` and remain there until explicitly cancelled by the user. There is no automatic matching engine.
+
+7. **No fractional shares**: Only whole numbers of shares are allowed. When `totalAmount` is provided, the quantity is calculated as `floor(totalAmount / closePrice)`.

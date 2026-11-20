@@ -1,0 +1,90 @@
+@baseUrl = http://localhost:3000
+
+### -------------------------------------------------------
+### INSTRUMENTS
+### -------------------------------------------------------
+
+### 1. Search instruments by ticker/name
+GET {{baseUrl}}/api/instruments/search?q=PAMP HTTP/1.1
+Content-Type: application/json
+
+### 2. Paginated search (limit + offset)
+GET {{baseUrl}}/api/instruments/search?q=A&limit=10&offset=0 HTTP/1.1
+Content-Type: application/json
+
+### -------------------------------------------------------
+### PORTFOLIO
+### -------------------------------------------------------
+
+### 3. Get portfolio for user 1
+GET {{baseUrl}}/api/portfolio/1 HTTP/1.1
+Content-Type: application/json
+
+### -------------------------------------------------------
+### ORDERS
+### -------------------------------------------------------
+
+### 4. MARKET BUY - purchase by quantity
+POST {{baseUrl}}/api/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "instrumentId": 1,
+  "side": "BUY",
+  "type": "MARKET",
+  "quantity": 5
+}
+
+### 5. MARKET SELL - sell by quantity
+POST {{baseUrl}}/api/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "instrumentId": 1,
+  "side": "SELL",
+  "type": "MARKET",
+  "quantity": 3
+}
+
+### 6. LIMIT BUY - buy with a price limit
+POST {{baseUrl}}/api/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "instrumentId": 1,
+  "side": "BUY",
+  "type": "LIMIT",
+  "quantity": 10,
+  "price": 150.50
+}
+
+### 7. MARKET BUY - purchase by totalAmount (cash value)
+POST {{baseUrl}}/api/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "instrumentId": 1,
+  "side": "BUY",
+  "type": "MARKET",
+  "totalAmount": 50000.00
+}
+
+### 8. Insufficient funds - attempt to buy a large quantity
+POST {{baseUrl}}/api/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "instrumentId": 1,
+  "side": "BUY",
+  "type": "MARKET",
+  "quantity": 999999
+}
+
+### 9. Cancel an order (order ID = 1)
+PATCH {{baseUrl}}/api/orders/1/cancel HTTP/1.1
+Content-Type: application/json
