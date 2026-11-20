@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { OrdersService } from './orders.service.js';
 import { Order } from './order.entity.js';
 import { MarketData } from '../marketdata/marketdata.entity.js';
@@ -36,9 +37,17 @@ describe('OrdersService', () => {
     createQueryBuilder: ReturnType<typeof vi.fn>;
   };
 
-  let marketDataRepo: {
+
+  // Mock manager used inside transactions
+  let mockManager: {
+    query: ReturnType<typeof vi.fn>;
     findOne: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    save: ReturnType<typeof vi.fn>;
+    createQueryBuilder: ReturnType<typeof vi.fn>;
   };
+
+  let mockDataSource: { transaction: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     orderRepo = {
@@ -48,15 +57,23 @@ describe('OrdersService', () => {
       createQueryBuilder: vi.fn(),
     };
 
-    marketDataRepo = {
+    mockManager = {
+      query: vi.fn().mockResolvedValue(undefined),
       findOne: vi.fn(),
+      create: vi.fn((_Entity: unknown, entity: Record<string, unknown>) => entity),
+      save: vi.fn((entity) => Promise.resolve({ id: 1, ...entity })),
+      createQueryBuilder: vi.fn(),
+    };
+
+    mockDataSource = {
+      transaction: vi.fn((cb: (manager: typeof mockManager) => Promise<unknown>) => cb(mockManager)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
         { provide: getRepositoryToken(Order), useValue: orderRepo },
-        { provide: getRepositoryToken(MarketData), useValue: marketDataRepo },
+        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
 
@@ -78,16 +95,16 @@ describe('OrdersService', () => {
 
   function mockCash(amount: number) {
     const qb = createQueryBuilderMock({ cash: amount });
-    orderRepo.createQueryBuilder.mockReturnValue(qb);
+    mockManager.createQueryBuilder.mockReturnValue(qb);
   }
 
   function mockShares(amount: number) {
     const qb = createQueryBuilderMock({ shares: amount });
-    orderRepo.createQueryBuilder.mockReturnValue(qb);
+    mockManager.createQueryBuilder.mockReturnValue(qb);
   }
 
   function mockMarketData(close: number) {
-    marketDataRepo.findOne.mockResolvedValue({ close, instrumentId: 10 } as Partial<MarketData>);
+    mockManager.findOne.mockResolvedValue({ close, instrumentId: 10 } as Partial<MarketData>);
   }
 
   // ======================================================================
@@ -104,7 +121,7 @@ describe('OrdersService', () => {
     expect(result.price).toBe(100);
     expect(result.size).toBe(5);
     expect(result.type).toBe(OrderType.MARKET);
-    expect(orderRepo.save).toHaveBeenCalledTimes(1);
+    expect(mockManager.save).toHaveBeenCalledTimes(1);
   });
 
   // ======================================================================
@@ -140,7 +157,7 @@ describe('OrdersService', () => {
     expect(result.size).toBe(10);
     expect(result.type).toBe(OrderType.LIMIT);
     // marketDataRepo should NOT be queried for LIMIT orders
-    expect(marketDataRepo.findOne).not.toHaveBeenCalled();
+    expect(mockManager.findOne).not.toHaveBeenCalled();
   });
 
   // ======================================================================
@@ -156,7 +173,7 @@ describe('OrdersService', () => {
     expect(result.status).toBe(OrderStatus.REJECTED);
     expect(result.price).toBe(100);
     expect(result.size).toBe(5);
-    expect(orderRepo.save).toHaveBeenCalledTimes(1);
+    expect(mockManager.save).toHaveBeenCalledTimes(1);
   });
 
   // ======================================================================
@@ -171,7 +188,7 @@ describe('OrdersService', () => {
 
     expect(result.status).toBe(OrderStatus.REJECTED);
     expect(result.size).toBe(5);
-    expect(orderRepo.save).toHaveBeenCalledTimes(1);
+    expect(mockManager.save).toHaveBeenCalledTimes(1);
   });
 
   // ======================================================================
@@ -223,14 +240,14 @@ describe('OrdersService', () => {
     const result = await service.create(dto);
 
     expect(result.price).toBe(42);
-    expect(marketDataRepo.findOne).not.toHaveBeenCalled();
+    expect(mockManager.findOne).not.toHaveBeenCalled();
   });
 
   // ======================================================================
   // 8. MARKET order with no market data -> BadRequestException
   // ======================================================================
   it('should throw BadRequestException when no market data exists for a MARKET order', async () => {
-    marketDataRepo.findOne.mockResolvedValue(null);
+    mockManager.findOne.mockResolvedValue(null);
 
     const dto = baseDto();
     await expect(service.create(dto)).rejects.toThrow(BadRequestException);
@@ -261,6 +278,7 @@ describe('OrdersService', () => {
     expect(orderRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({ id: 42, status: OrderStatus.CANCELLED }),
     );
+    expect(mockManager.save).not.toHaveBeenCalled();
   });
 
   // ======================================================================
@@ -316,6 +334,6 @@ describe('OrdersService', () => {
     const result = await service.create(dto);
 
     expect(result.status).toBe(OrderStatus.REJECTED);
-    expect(orderRepo.save).toHaveBeenCalledTimes(1);
+    expect(mockManager.save).toHaveBeenCalledTimes(1);
   });
 });
