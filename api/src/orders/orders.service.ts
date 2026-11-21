@@ -25,6 +25,16 @@ export class OrdersService {
     }
 
     return this.dataSource.transaction(async (manager) => {
+      // Idempotency check: return existing order if key was already processed
+      if (dto.idempotencyKey) {
+        const existing = await manager.findOne(Order, {
+          where: { idempotencyKey: dto.idempotencyKey },
+        });
+        if (existing) {
+          return existing;
+        }
+      }
+
       // Advisory lock on userId to serialize concurrent orders per user
       await manager.query('SELECT pg_advisory_xact_lock($1)', [dto.userId]);
 
@@ -61,6 +71,7 @@ export class OrdersService {
       price,
       size,
       status,
+      idempotencyKey: dto.idempotencyKey ?? null,
       datetime: new Date(),
     });
 
@@ -84,6 +95,7 @@ export class OrdersService {
       price: dto.price,
       size,
       status: status === OrderStatus.FILLED ? OrderStatus.NEW : status,
+      idempotencyKey: dto.idempotencyKey ?? null,
       datetime: new Date(),
     });
 

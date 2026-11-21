@@ -31,6 +31,9 @@ export class Order {
   @Column({ type: 'varchar' })
   status: OrderStatus;
 
+  @Column({ type: 'varchar', name: 'idempotency_key', nullable: true, unique: true })
+  idempotencyKey: string | null;
+
   @Column({ type: 'timestamp' })
   datetime: Date;
 

@@ -1,8 +1,12 @@
-import { IsEnum, IsInt, IsNumber, IsOptional, IsPositive, ValidateIf } from 'class-validator';
+import { IsEnum, IsInt, IsNumber, IsOptional, IsPositive, IsString, ValidateIf } from 'class-validator';
 import { OrderSide } from '../../common/enums/order-side.enum.js';
 import { OrderType } from '../../common/enums/order-type.enum.js';
 
 export class CreateOrderDto {
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+
   @IsInt()
   userId: number;
 
