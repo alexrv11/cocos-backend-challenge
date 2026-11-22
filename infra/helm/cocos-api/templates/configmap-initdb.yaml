@@ -6,6 +6,8 @@ metadata:
   labels:
     {{- include "cocos-api.labels" . | nindent 4 }}
 data:
-  000_init.sql: |
-{{ .Files.Get "files/000_init.sql" | indent 4 }}
+  000_schema.sql: |
+{{ .Files.Get "files/000_schema.sql" | indent 4 }}
+  001_seed.sql: |
+{{ .Files.Get (printf "files/seeds/%s/001_seed.sql" .Values.initMigration.seedProfile) | indent 4 }}
 {{- end }}

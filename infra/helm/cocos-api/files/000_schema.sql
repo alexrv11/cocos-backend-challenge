@@ -1,0 +1,37 @@
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR NOT NULL UNIQUE,
+  password VARCHAR NOT NULL,
+  accountnumber VARCHAR NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS instruments (
+  id SERIAL PRIMARY KEY,
+  ticker VARCHAR NOT NULL,
+  name VARCHAR NOT NULL,
+  type VARCHAR NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS marketdata (
+  id SERIAL PRIMARY KEY,
+  instrumentid INTEGER NOT NULL REFERENCES instruments(id),
+  high NUMERIC,
+  low NUMERIC,
+  open NUMERIC,
+  close NUMERIC NOT NULL,
+  previousclose NUMERIC,
+  date DATE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id SERIAL PRIMARY KEY,
+  instrumentid INTEGER NOT NULL REFERENCES instruments(id),
+  userid INTEGER NOT NULL REFERENCES users(id),
+  size INTEGER NOT NULL,
+  price NUMERIC NOT NULL,
+  type VARCHAR NOT NULL,
+  side VARCHAR NOT NULL,
+  status VARCHAR NOT NULL,
+  idempotency_key VARCHAR UNIQUE,
+  datetime TIMESTAMP NOT NULL
+);

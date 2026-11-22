@@ -42,3 +42,4 @@ postgresql:
 
 initMigration:
   enabled: true
+  seedProfile: dev  # "dev" = fake users + market data, "prod" = instruments only

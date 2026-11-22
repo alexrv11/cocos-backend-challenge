@@ -1,46 +1,12 @@
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  email VARCHAR NOT NULL,
-  accountnumber VARCHAR NOT NULL
-);
+-- Dev/Local seed data — DO NOT run in production
 
-CREATE TABLE IF NOT EXISTS instruments (
-  id SERIAL PRIMARY KEY,
-  ticker VARCHAR NOT NULL,
-  name VARCHAR NOT NULL,
-  type VARCHAR NOT NULL
-);
+-- Seed users (password: password123)
+INSERT INTO users (email, password, accountnumber) VALUES
+  ('user1@cocos.com', '$2b$10$UcD1Km7sBU65o8r3yCJcLu6vUhJSKPAUqUNYpwiBH4a.IxV2zxBre', 'ACC-001'),
+  ('user2@cocos.com', '$2b$10$UcD1Km7sBU65o8r3yCJcLu6vUhJSKPAUqUNYpwiBH4a.IxV2zxBre', 'ACC-002')
+ON CONFLICT (email) DO NOTHING;
 
-CREATE TABLE IF NOT EXISTS marketdata (
-  id SERIAL PRIMARY KEY,
-  instrumentid INTEGER NOT NULL REFERENCES instruments(id),
-  high NUMERIC,
-  low NUMERIC,
-  open NUMERIC,
-  close NUMERIC NOT NULL,
-  previousclose NUMERIC,
-  date DATE NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS orders (
-  id SERIAL PRIMARY KEY,
-  instrumentid INTEGER NOT NULL REFERENCES instruments(id),
-  userid INTEGER NOT NULL REFERENCES users(id),
-  size INTEGER NOT NULL,
-  price NUMERIC NOT NULL,
-  type VARCHAR NOT NULL,
-  side VARCHAR NOT NULL,
-  status VARCHAR NOT NULL,
-  idempotency_key VARCHAR UNIQUE,
-  datetime TIMESTAMP NOT NULL
-);
-
--- Seed users
-INSERT INTO users (email, accountnumber) VALUES
-  ('user1@cocos.com', 'ACC-001'),
-  ('user2@cocos.com', 'ACC-002');
-
--- Seed instruments
+-- Instruments (reference data)
 INSERT INTO instruments (ticker, name, type) VALUES
   ('PAMP', 'Pampa Energía S.A.', 'ACCIONES'),
   ('YPFD', 'YPF S.A.', 'ACCIONES'),
@@ -52,7 +18,7 @@ INSERT INTO instruments (ticker, name, type) VALUES
   ('MELI', 'MercadoLibre Inc.', 'CEDEARS'),
   ('ARS', 'MONEDA', 'MONEDA');
 
--- Seed marketdata (2 days)
+-- Market data (2 days of sample prices)
 INSERT INTO marketdata (instrumentid, high, low, open, close, previousclose, date) VALUES
   (1, 1050, 920, 950, 1000, 950, '2023-07-13'),
   (1, 1100, 980, 1000, 1050, 1000, '2023-07-14'),
@@ -71,7 +37,7 @@ INSERT INTO marketdata (instrumentid, high, low, open, close, previousclose, dat
   (8, 15500, 14800, 15000, 15200, 15000, '2023-07-13'),
   (8, 15800, 15100, 15200, 15500, 15200, '2023-07-14');
 
--- Seed initial CASH_IN orders for users
+-- Initial cash balances
 INSERT INTO orders (instrumentid, userid, size, price, type, side, status, datetime) VALUES
   (9, 1, 1000000, 1, 'MARKET', 'CASH_IN', 'FILLED', '2023-07-10 10:00:00'),
   (9, 2, 500000, 1, 'MARKET', 'CASH_IN', 'FILLED', '2023-07-10 10:00:00');
