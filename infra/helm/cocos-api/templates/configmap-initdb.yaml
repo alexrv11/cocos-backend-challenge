@@ -1,0 +1,11 @@
+{{- if .Values.initMigration.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-initdb
+  labels:
+    {{- include "cocos-api.labels" . | nindent 4 }}
+data:
+  000_init.sql: |
+{{ .Files.Get "files/000_init.sql" | indent 4 }}
+{{- end }}

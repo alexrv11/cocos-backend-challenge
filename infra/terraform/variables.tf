@@ -1,0 +1,41 @@
+variable "kubeconfig_path" {
+  description = "Path to kubeconfig file"
+  type        = string
+  default     = "~/.kube/config"
+}
+
+variable "kube_context" {
+  description = "Kubernetes context to use"
+  type        = string
+  default     = "kind-finance-local"
+}
+
+variable "namespace" {
+  description = "Kubernetes namespace"
+  type        = string
+  default     = "cocos"
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "local"
+}
+
+variable "image_repository" {
+  description = "Docker image repository"
+  type        = string
+  default     = "cocos-api"
+}
+
+variable "image_tag" {
+  description = "Docker image tag"
+  type        = string
+  default     = "latest"
+}
+
+variable "replica_count" {
+  description = "Number of API replicas"
+  type        = number
+  default     = 1
+}

@@ -1,0 +1,44 @@
+replicaCount: 1
+
+image:
+  repository: cocos-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 3000
+  nodePort: 30000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+env:
+  DB_HOST: "{{ .Release.Name }}-postgresql"
+  DB_PORT: "5432"
+  DB_USER: cocos
+  DB_PASSWORD: cocos123
+  DB_NAME: cocosdb
+  DB_SSL: "false"
+
+postgresql:
+  enabled: true
+  image:
+    tag: latest
+  auth:
+    username: cocos
+    password: cocos123
+    database: cocosdb
+  primary:
+    persistence:
+      size: 1Gi
+    initdb:
+      scriptsConfigMap: "{{ .Release.Name }}-initdb"
+
+initMigration:
+  enabled: true
