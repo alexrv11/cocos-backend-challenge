@@ -81,9 +81,10 @@ describe('OrdersService', () => {
   });
 
   // ------------------------------------------------------------------ helpers
+  const defaultUserId = 1;
+
   function baseDto(overrides: Partial<CreateOrderDto> = {}): CreateOrderDto {
     return {
-      userId: 1,
       instrumentId: 10,
       side: OrderSide.BUY,
       type: OrderType.MARKET,
@@ -115,7 +116,7 @@ describe('OrdersService', () => {
     mockCash(10_000); // 5 * 100 = 500 <= 10 000
 
     const dto = baseDto();
-    const result = await service.create(dto);
+    const result = await service.create(defaultUserId, dto);
 
     expect(result.status).toBe(OrderStatus.FILLED);
     expect(result.price).toBe(100);
@@ -132,7 +133,7 @@ describe('OrdersService', () => {
     mockShares(10); // user owns 10, selling 5
 
     const dto = baseDto({ side: OrderSide.SELL, quantity: 5 });
-    const result = await service.create(dto);
+    const result = await service.create(defaultUserId, dto);
 
     expect(result.status).toBe(OrderStatus.FILLED);
     expect(result.price).toBe(50);
@@ -150,7 +151,7 @@ describe('OrdersService', () => {
       price: 75,
       quantity: 10,
     });
-    const result = await service.create(dto);
+    const result = await service.create(defaultUserId, dto);
 
     expect(result.status).toBe(OrderStatus.NEW);
     expect(result.price).toBe(75);
@@ -168,7 +169,7 @@ describe('OrdersService', () => {
     mockCash(200); // needs 5 * 100 = 500, only 200 available
 
     const dto = baseDto({ quantity: 5 });
-    const result = await service.create(dto);
+    const result = await service.create(defaultUserId, dto);
 
     expect(result.status).toBe(OrderStatus.REJECTED);
     expect(result.price).toBe(100);
@@ -184,7 +185,7 @@ describe('OrdersService', () => {
     mockShares(2); // user has 2, trying to sell 5
 
     const dto = baseDto({ side: OrderSide.SELL, quantity: 5 });
-    const result = await service.create(dto);
+    const result = await service.create(defaultUserId, dto);
 
     expect(result.status).toBe(OrderStatus.REJECTED);
     expect(result.size).toBe(5);
@@ -202,7 +203,7 @@ describe('OrdersService', () => {
       quantity: undefined,
       totalAmount: 100, // 100 / 30 = 3.33 -> floor = 3
     });
-    const result = await service.create(dto);
+    const result = await service.create(defaultUserId, dto);
 
     expect(result.size).toBe(3);
     expect(result.price).toBe(30);
@@ -218,7 +219,7 @@ describe('OrdersService', () => {
       quantity: undefined,
       totalAmount: 50, // 50 / 7 = 7.14 -> floor = 7
     });
-    const result = await service.create(dto);
+    const result = await service.create(defaultUserId, dto);
 
     expect(result.size).toBe(7);
     expect(result.price).toBe(7);
@@ -237,7 +238,7 @@ describe('OrdersService', () => {
       price: 42,
       quantity: 2,
     });
-    const result = await service.create(dto);
+    const result = await service.create(defaultUserId, dto);
 
     expect(result.price).toBe(42);
     expect(mockManager.findOne).not.toHaveBeenCalled();
@@ -250,8 +251,8 @@ describe('OrdersService', () => {
     mockManager.findOne.mockResolvedValue(null);
 
     const dto = baseDto();
-    await expect(service.create(dto)).rejects.toThrow(BadRequestException);
-    await expect(service.create(dto)).rejects.toThrow('No market data available for this instrument');
+    await expect(service.create(defaultUserId, dto)).rejects.toThrow(BadRequestException);
+    await expect(service.create(defaultUserId, dto)).rejects.toThrow('No market data available for this instrument');
   });
 
   // ======================================================================
@@ -299,14 +300,14 @@ describe('OrdersService', () => {
   // ======================================================================
   it('should throw BadRequestException when both quantity and totalAmount are provided', async () => {
     const dto = baseDto({ quantity: 5, totalAmount: 500 });
-    await expect(service.create(dto)).rejects.toThrow(BadRequestException);
-    await expect(service.create(dto)).rejects.toThrow('quantity and totalAmount are mutually exclusive');
+    await expect(service.create(defaultUserId, dto)).rejects.toThrow(BadRequestException);
+    await expect(service.create(defaultUserId, dto)).rejects.toThrow('quantity and totalAmount are mutually exclusive');
   });
 
   it('should throw BadRequestException when neither quantity nor totalAmount is provided', async () => {
     const dto = baseDto({ quantity: undefined, totalAmount: undefined });
-    await expect(service.create(dto)).rejects.toThrow(BadRequestException);
-    await expect(service.create(dto)).rejects.toThrow('Either quantity or totalAmount must be provided');
+    await expect(service.create(defaultUserId, dto)).rejects.toThrow(BadRequestException);
+    await expect(service.create(defaultUserId, dto)).rejects.toThrow('Either quantity or totalAmount must be provided');
   });
 
   it('should throw NotFoundException when cancelling a non-existent order', async () => {
@@ -318,8 +319,8 @@ describe('OrdersService', () => {
     mockMarketData(200);
 
     const dto = baseDto({ quantity: undefined, totalAmount: 50 }); // 50 / 200 = 0.25 -> floor = 0
-    await expect(service.create(dto)).rejects.toThrow(BadRequestException);
-    await expect(service.create(dto)).rejects.toThrow('Insufficient totalAmount for at least 1 share');
+    await expect(service.create(defaultUserId, dto)).rejects.toThrow(BadRequestException);
+    await expect(service.create(defaultUserId, dto)).rejects.toThrow('Insufficient totalAmount for at least 1 share');
   });
 
   it('should REJECT a LIMIT SELL order when user has insufficient shares', async () => {
@@ -331,7 +332,7 @@ describe('OrdersService', () => {
       price: 50,
       quantity: 5,
     });
-    const result = await service.create(dto);
+    const result = await service.create(defaultUserId, dto);
 
     expect(result.status).toBe(OrderStatus.REJECTED);
     expect(mockManager.save).toHaveBeenCalledTimes(1);

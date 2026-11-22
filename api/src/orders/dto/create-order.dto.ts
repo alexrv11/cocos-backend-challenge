@@ -9,10 +9,6 @@ export class CreateOrderDto {
   @IsString()
   idempotencyKey?: string;
 
-  @ApiProperty({ example: 1 })
-  @IsInt()
-  userId: number;
-
   @ApiProperty({ example: 31 })
   @IsInt()
   instrumentId: number;

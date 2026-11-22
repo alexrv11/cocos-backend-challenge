@@ -11,6 +11,7 @@ async function bootstrap() {
     .setTitle('Cocos Trading API')
     .setDescription('Order submission, portfolio management, and instrument search')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);

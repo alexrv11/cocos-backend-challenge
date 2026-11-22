@@ -16,7 +16,7 @@ export class OrdersService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async create(dto: CreateOrderDto): Promise<Order> {
+  async create(userId: number, dto: CreateOrderDto): Promise<Order> {
     if (dto.quantity && dto.totalAmount) {
       throw new BadRequestException('quantity and totalAmount are mutually exclusive');
     }
@@ -36,16 +36,16 @@ export class OrdersService {
       }
 
       // Advisory lock on userId to serialize concurrent orders per user
-      await manager.query('SELECT pg_advisory_xact_lock($1)', [dto.userId]);
+      await manager.query('SELECT pg_advisory_xact_lock($1)', [userId]);
 
       if (dto.type === OrderType.MARKET) {
-        return this.createMarketOrder(dto, manager);
+        return this.createMarketOrder(userId, dto, manager);
       }
-      return this.createLimitOrder(dto, manager);
+      return this.createLimitOrder(userId, dto, manager);
     });
   }
 
-  private async createMarketOrder(dto: CreateOrderDto, manager: EntityManager): Promise<Order> {
+  private async createMarketOrder(userId: number, dto: CreateOrderDto, manager: EntityManager): Promise<Order> {
     const marketData = await manager.findOne(MarketData, {
       where: { instrumentId: dto.instrumentId },
       order: { date: 'DESC' },
@@ -61,10 +61,10 @@ export class OrdersService {
       throw new BadRequestException('Insufficient totalAmount for at least 1 share at current price');
     }
 
-    const status = await this.validateOrder(dto, price, size, manager);
+    const status = await this.validateOrder(userId, dto, price, size, manager);
 
     const order = manager.create(Order, {
-      userId: dto.userId,
+      userId,
       instrumentId: dto.instrumentId,
       side: dto.side,
       type: dto.type,
@@ -78,17 +78,17 @@ export class OrdersService {
     return manager.save(order);
   }
 
-  private async createLimitOrder(dto: CreateOrderDto, manager: EntityManager): Promise<Order> {
+  private async createLimitOrder(userId: number, dto: CreateOrderDto, manager: EntityManager): Promise<Order> {
     const size = dto.quantity ?? Math.floor(dto.totalAmount! / dto.price);
 
     if (size <= 0) {
       throw new BadRequestException('Insufficient totalAmount for at least 1 share at given price');
     }
 
-    const status = await this.validateOrder(dto, dto.price, size, manager);
+    const status = await this.validateOrder(userId, dto, dto.price, size, manager);
 
     const order = manager.create(Order, {
-      userId: dto.userId,
+      userId,
       instrumentId: dto.instrumentId,
       side: dto.side,
       type: dto.type,
@@ -102,15 +102,15 @@ export class OrdersService {
     return manager.save(order);
   }
 
-  private async validateOrder(dto: CreateOrderDto, price: number, size: number, manager: EntityManager): Promise<OrderStatus> {
+  private async validateOrder(userId: number, dto: CreateOrderDto, price: number, size: number, manager: EntityManager): Promise<OrderStatus> {
     if (dto.side === OrderSide.BUY) {
-      const availableCash = await this.getAvailableCash(dto.userId, manager);
+      const availableCash = await this.getAvailableCash(userId, manager);
       const orderCost = size * price;
       if (orderCost > availableCash) {
         return OrderStatus.REJECTED;
       }
     } else if (dto.side === OrderSide.SELL) {
-      const availableShares = await this.getAvailableShares(dto.userId, dto.instrumentId, manager);
+      const availableShares = await this.getAvailableShares(userId, dto.instrumentId, manager);
       if (size > availableShares) {
         return OrderStatus.REJECTED;
       }

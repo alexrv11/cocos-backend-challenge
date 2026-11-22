@@ -8,6 +8,9 @@ import { OrderStatus } from './../src/common/enums/order-status.enum.js';
 import { OrderSide } from './../src/common/enums/order-side.enum.js';
 import { OrderType } from './../src/common/enums/order-type.enum.js';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { JwtAuthGuard } from './../src/auth/jwt-auth.guard.js';
+
+const mockUser = { userId: 1, email: 'test@cocos.com' };
 
 describe('Orders (e2e)', () => {
   let app: INestApplication<App>;
@@ -25,7 +28,14 @@ describe('Orders (e2e)', () => {
       providers: [
         { provide: OrdersService, useValue: mockOrdersService },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: (ctx) => {
+        const req = ctx.switchToHttp().getRequest();
+        req.user = mockUser;
+        return true;
+      }})
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
@@ -45,7 +55,6 @@ describe('Orders (e2e)', () => {
   describe('POST /api/orders', () => {
     it('MARKET BUY -> 201 with status FILLED', async () => {
       const dto = {
-        userId: 1,
         instrumentId: 10,
         side: OrderSide.BUY,
         type: OrderType.MARKET,
@@ -54,7 +63,7 @@ describe('Orders (e2e)', () => {
 
       const expectedOrder = {
         id: 1,
-        userId: dto.userId,
+        userId: mockUser.userId,
         instrumentId: dto.instrumentId,
         side: dto.side,
         type: dto.type,
@@ -72,12 +81,11 @@ describe('Orders (e2e)', () => {
         .expect(201);
 
       expect(response.body).toEqual(expectedOrder);
-      expect(mockOrdersService.create).toHaveBeenCalledWith(dto);
+      expect(mockOrdersService.create).toHaveBeenCalledWith(mockUser.userId, dto);
     });
 
     it('MARKET SELL -> 201 with status FILLED', async () => {
       const dto = {
-        userId: 1,
         instrumentId: 10,
         side: OrderSide.SELL,
         type: OrderType.MARKET,
@@ -86,7 +94,7 @@ describe('Orders (e2e)', () => {
 
       const expectedOrder = {
         id: 2,
-        userId: dto.userId,
+        userId: mockUser.userId,
         instrumentId: dto.instrumentId,
         side: dto.side,
         type: dto.type,
@@ -104,12 +112,11 @@ describe('Orders (e2e)', () => {
         .expect(201);
 
       expect(response.body).toEqual(expectedOrder);
-      expect(mockOrdersService.create).toHaveBeenCalledWith(dto);
+      expect(mockOrdersService.create).toHaveBeenCalledWith(mockUser.userId, dto);
     });
 
     it('LIMIT BUY -> 201 with status NEW', async () => {
       const dto = {
-        userId: 1,
         instrumentId: 10,
         side: OrderSide.BUY,
         type: OrderType.LIMIT,
@@ -119,7 +126,7 @@ describe('Orders (e2e)', () => {
 
       const expectedOrder = {
         id: 3,
-        userId: dto.userId,
+        userId: mockUser.userId,
         instrumentId: dto.instrumentId,
         side: dto.side,
         type: dto.type,
@@ -137,12 +144,11 @@ describe('Orders (e2e)', () => {
         .expect(201);
 
       expect(response.body).toEqual(expectedOrder);
-      expect(mockOrdersService.create).toHaveBeenCalledWith(dto);
+      expect(mockOrdersService.create).toHaveBeenCalledWith(mockUser.userId, dto);
     });
 
     it('insufficient funds -> 201 with status REJECTED', async () => {
       const dto = {
-        userId: 1,
         instrumentId: 10,
         side: OrderSide.BUY,
         type: OrderType.MARKET,
@@ -151,7 +157,7 @@ describe('Orders (e2e)', () => {
 
       const expectedOrder = {
         id: 4,
-        userId: dto.userId,
+        userId: mockUser.userId,
         instrumentId: dto.instrumentId,
         side: dto.side,
         type: dto.type,
@@ -174,7 +180,6 @@ describe('Orders (e2e)', () => {
 
     it('insufficient shares -> 201 with status REJECTED', async () => {
       const dto = {
-        userId: 1,
         instrumentId: 10,
         side: OrderSide.SELL,
         type: OrderType.MARKET,
@@ -183,7 +188,7 @@ describe('Orders (e2e)', () => {
 
       const expectedOrder = {
         id: 5,
-        userId: dto.userId,
+        userId: mockUser.userId,
         instrumentId: dto.instrumentId,
         side: dto.side,
         type: dto.type,
@@ -217,26 +222,10 @@ describe('Orders (e2e)', () => {
       expect(mockOrdersService.create).not.toHaveBeenCalled();
     });
 
-    it('missing userId -> 400', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/api/orders')
-        .send({
-          instrumentId: 10,
-          side: OrderSide.BUY,
-          type: OrderType.MARKET,
-          quantity: 5,
-        })
-        .expect(400);
-
-      expect(response.body.message).toBeInstanceOf(Array);
-      expect(mockOrdersService.create).not.toHaveBeenCalled();
-    });
-
     it('missing instrumentId -> 400', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/orders')
         .send({
-          userId: 1,
           side: OrderSide.BUY,
           type: OrderType.MARKET,
           quantity: 5,
@@ -251,7 +240,6 @@ describe('Orders (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/orders')
         .send({
-          userId: 1,
           instrumentId: 10,
           type: OrderType.MARKET,
           quantity: 5,
@@ -266,7 +254,6 @@ describe('Orders (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/orders')
         .send({
-          userId: 1,
           instrumentId: 10,
           side: OrderSide.BUY,
           quantity: 5,
@@ -281,7 +268,6 @@ describe('Orders (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/orders')
         .send({
-          userId: 1,
           instrumentId: 10,
           side: 'INVALID',
           type: OrderType.MARKET,
@@ -297,7 +283,6 @@ describe('Orders (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/orders')
         .send({
-          userId: 1,
           instrumentId: 10,
           side: OrderSide.BUY,
           type: 'STOP_LOSS',
@@ -313,7 +298,6 @@ describe('Orders (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/orders')
         .send({
-          userId: 1,
           instrumentId: 10,
           side: OrderSide.BUY,
           type: OrderType.MARKET,
@@ -335,7 +319,6 @@ describe('Orders (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/orders')
         .send({
-          userId: 1,
           instrumentId: 10,
           side: OrderSide.BUY,
           type: OrderType.LIMIT,
@@ -355,7 +338,6 @@ describe('Orders (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/orders')
         .send({
-          userId: 1,
           instrumentId: 10,
           side: OrderSide.BUY,
           type: OrderType.MARKET,
@@ -367,6 +349,26 @@ describe('Orders (e2e)', () => {
       expect(response.body.message).toBe(
         'quantity and totalAmount are mutually exclusive',
       );
+    });
+
+    it('userId in body is rejected (forbidNonWhitelisted) -> 400', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/orders')
+        .send({
+          userId: 999,
+          instrumentId: 10,
+          side: OrderSide.BUY,
+          type: OrderType.MARKET,
+          quantity: 5,
+        })
+        .expect(400);
+
+      expect(response.body.message).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('userId'),
+        ]),
+      );
+      expect(mockOrdersService.create).not.toHaveBeenCalled();
     });
   });
 
