@@ -7,6 +7,7 @@ import { User } from './users/user.entity.js';
 import { Instrument } from './instruments/instrument.entity.js';
 import { Order } from './orders/order.entity.js';
 import { MarketData } from './marketdata/marketdata.entity.js';
+import { AuthModule } from './auth/auth.module.js';
 import { InstrumentsModule } from './instruments/instruments.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { PortfolioModule } from './portfolio/portfolio.module.js';
@@ -14,6 +15,7 @@ import { PortfolioModule } from './portfolio/portfolio.module.js';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    AuthModule,
     InstrumentsModule,
     OrdersModule,
     PortfolioModule,

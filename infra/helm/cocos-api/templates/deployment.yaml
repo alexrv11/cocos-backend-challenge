@@ -37,6 +37,10 @@ spec:
               value: {{ .Values.postgresql.auth.database }}
             - name: DB_SSL
               value: "false"
+            - name: JWT_SECRET
+              value: {{ .Values.jwt.secret | quote }}
+            - name: JWT_EXPIRATION
+              value: {{ .Values.jwt.expiration | quote }}
           readinessProbe:
             httpGet:
               path: /api/docs

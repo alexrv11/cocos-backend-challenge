@@ -28,6 +28,8 @@ services:
       DB_PASSWORD: cocos123
       DB_NAME: cocosdb
       DB_SSL: "false"
+      JWT_SECRET: cocos-dev-secret
+      JWT_EXPIRATION: 4h
     depends_on:
       db:
         condition: service_healthy

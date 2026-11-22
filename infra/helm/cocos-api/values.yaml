@@ -40,6 +40,10 @@ postgresql:
     initdb:
       scriptsConfigMap: "{{ .Release.Name }}-initdb"
 
+jwt:
+  secret: cocos-dev-secret  # Override in production!
+  expiration: 4h
+
 initMigration:
   enabled: true
   seedProfile: dev  # "dev" = fake users + market data, "prod" = instruments only
