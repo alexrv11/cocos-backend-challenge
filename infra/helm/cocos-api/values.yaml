@@ -44,6 +44,11 @@ jwt:
   secret: cocos-dev-secret  # Override in production!
   expiration: 4h
 
+metrics:
+  serviceMonitor:
+    enabled: true
+    interval: "15s"
+
 initMigration:
   enabled: true
   seedProfile: dev  # "dev" = fake users + market data, "prod" = instruments only

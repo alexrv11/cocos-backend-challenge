@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { makeCounterProvider } from '@willsoto/nestjs-prometheus';
 import { AuthService } from './auth.service.js';
 import { AuthController } from './auth.controller.js';
 import { JwtStrategy } from './jwt.strategy.js';
@@ -24,7 +25,20 @@ import { User } from '../users/user.entity.js';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    makeCounterProvider({
+      name: 'auth_login_total',
+      help: 'Total login attempts',
+      labelNames: ['result'],
+    }),
+    makeCounterProvider({
+      name: 'auth_register_total',
+      help: 'Total registration attempts',
+      labelNames: ['result'],
+    }),
+  ],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

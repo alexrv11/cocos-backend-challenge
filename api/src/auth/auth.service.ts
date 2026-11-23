@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/user.entity.js';
@@ -18,6 +20,10 @@ export class AuthService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly jwtService: JwtService,
+    @InjectMetric('auth_login_total')
+    private readonly loginCounter: Counter,
+    @InjectMetric('auth_register_total')
+    private readonly registerCounter: Counter,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -25,6 +31,7 @@ export class AuthService {
       where: { email: dto.email },
     });
     if (existing) {
+      this.registerCounter.inc({ result: 'failure' });
       throw new ConflictException('Email already registered');
     }
 
@@ -37,6 +44,7 @@ export class AuthService {
       accountNumber,
     });
     const saved = await this.userRepo.save(user);
+    this.registerCounter.inc({ result: 'success' });
 
     return {
       accessToken: this.generateToken(saved),
@@ -49,14 +57,17 @@ export class AuthService {
       where: { email: dto.email },
     });
     if (!user) {
+      this.loginCounter.inc({ result: 'failure' });
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const passwordValid = await bcrypt.compare(dto.password, user.password);
     if (!passwordValid) {
+      this.loginCounter.inc({ result: 'failure' });
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    this.loginCounter.inc({ result: 'success' });
     return {
       accessToken: this.generateToken(user),
       user: { id: user.id, email: user.email, accountNumber: user.accountNumber },

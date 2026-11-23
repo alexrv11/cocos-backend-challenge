@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { getToken } from '@willsoto/nestjs-prometheus';
 import { DataSource } from 'typeorm';
 import { OrdersService } from './orders.service.js';
 import { Order } from './order.entity.js';
@@ -9,6 +10,8 @@ import { CreateOrderDto } from './dto/create-order.dto.js';
 import { OrderSide } from '../common/enums/order-side.enum.js';
 import { OrderType } from '../common/enums/order-type.enum.js';
 import { OrderStatus } from '../common/enums/order-status.enum.js';
+
+const mockCounter = { inc: vi.fn() };
 
 /**
  * Helper: build a chainable query-builder mock.
@@ -74,6 +77,8 @@ describe('OrdersService', () => {
         OrdersService,
         { provide: getRepositoryToken(Order), useValue: orderRepo },
         { provide: DataSource, useValue: mockDataSource },
+        { provide: getToken('orders_created_total'), useValue: mockCounter },
+        { provide: getToken('orders_cancelled_total'), useValue: mockCounter },
       ],
     }).compile();
 

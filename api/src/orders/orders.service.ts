@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Order } from './order.entity.js';
 import { MarketData } from '../marketdata/marketdata.entity.js';
@@ -14,6 +16,10 @@ export class OrdersService {
     @InjectRepository(Order)
     private readonly orderRepo: Repository<Order>,
     private readonly dataSource: DataSource,
+    @InjectMetric('orders_created_total')
+    private readonly ordersCreated: Counter,
+    @InjectMetric('orders_cancelled_total')
+    private readonly ordersCancelled: Counter,
   ) {}
 
   async create(userId: number, dto: CreateOrderDto): Promise<Order> {
@@ -38,10 +44,12 @@ export class OrdersService {
       // Advisory lock on userId to serialize concurrent orders per user
       await manager.query('SELECT pg_advisory_xact_lock($1)', [userId]);
 
-      if (dto.type === OrderType.MARKET) {
-        return this.createMarketOrder(userId, dto, manager);
-      }
-      return this.createLimitOrder(userId, dto, manager);
+      const order = dto.type === OrderType.MARKET
+        ? await this.createMarketOrder(userId, dto, manager)
+        : await this.createLimitOrder(userId, dto, manager);
+
+      this.ordersCreated.inc({ type: order.type, side: order.side, status: order.status });
+      return order;
     });
   }
 
@@ -158,6 +166,8 @@ export class OrdersService {
       throw new BadRequestException(`Only NEW orders can be cancelled, current status: ${order.status}`);
     }
     order.status = OrderStatus.CANCELLED;
-    return this.orderRepo.save(order);
+    const saved = await this.orderRepo.save(order);
+    this.ordersCancelled.inc();
+    return saved;
   }
 }

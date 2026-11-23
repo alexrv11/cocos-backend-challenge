@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { getToken } from '@willsoto/nestjs-prometheus';
 import { JwtService } from '@nestjs/jwt';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
@@ -10,6 +11,8 @@ vi.mock('bcrypt', () => ({
   hash: vi.fn(),
   compare: vi.fn(),
 }));
+
+const mockCounter = { inc: vi.fn() };
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -32,6 +35,8 @@ describe('AuthService', () => {
         AuthService,
         { provide: getRepositoryToken(User), useValue: mockUserRepo },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: getToken('auth_login_total'), useValue: mockCounter },
+        { provide: getToken('auth_register_total'), useValue: mockCounter },
       ],
     }).compile();
 

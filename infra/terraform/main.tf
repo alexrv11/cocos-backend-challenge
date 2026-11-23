@@ -114,41 +114,16 @@ resource "helm_release" "prometheus_stack" {
     value = var.grafana_admin_password
   }
 
+  # Allow Prometheus to discover ServiceMonitors across all namespaces
   set {
     name  = "prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues"
     value = "false"
   }
 
-  depends_on = [kubernetes_namespace.monitoring]
-}
-
-# ServiceMonitor to scrape the Cocos API /metrics endpoint
-resource "kubernetes_manifest" "api_service_monitor" {
-  manifest = {
-    apiVersion = "monitoring.coreos.com/v1"
-    kind       = "ServiceMonitor"
-    metadata = {
-      name      = "cocos-api"
-      namespace = kubernetes_namespace.cocos.metadata[0].name
-      labels = {
-        app = "cocos-api"
-      }
-    }
-    spec = {
-      selector = {
-        matchLabels = {
-          "app.kubernetes.io/name" = "cocos-api"
-        }
-      }
-      endpoints = [
-        {
-          port     = "http"
-          path     = "/metrics"
-          interval = "15s"
-        }
-      ]
-    }
+  set {
+    name  = "prometheus.prometheusSpec.serviceMonitorNamespaceSelector.any"
+    value = "true"
   }
 
-  depends_on = [helm_release.prometheus_stack, helm_release.cocos_api]
+  depends_on = [kubernetes_namespace.monitoring]
 }
