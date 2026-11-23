@@ -39,3 +39,18 @@ variable "replica_count" {
   type        = number
   default     = 1
 }
+
+# ---------------------------------------------------------------------------
+# Prometheus + Grafana
+# ---------------------------------------------------------------------------
+variable "grafana_admin_password" {
+  description = "Grafana admin password"
+  type        = string
+  default     = "cocos-grafana"
+}
+
+variable "prometheus_alertmanager_enabled" {
+  description = "Enable Alertmanager"
+  type        = string
+  default     = "false"
+}

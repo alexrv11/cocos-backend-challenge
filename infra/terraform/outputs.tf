@@ -13,3 +13,11 @@ output "release_status" {
 output "api_url" {
   value = "http://localhost:30000"
 }
+
+output "grafana_url" {
+  value = "http://localhost:30300"
+}
+
+output "prometheus_release_status" {
+  value = helm_release.prometheus_stack.status
+}
