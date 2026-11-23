@@ -1,4 +1,4 @@
-import { useState, useDeferredValue } from 'react';
+import { useState, useEffect, useDeferredValue } from 'react';
 import InstrumentSearch from '../components/InstrumentSearch';
 import InstrumentCard from '../components/InstrumentCard';
 import PriceChart from '../components/PriceChart';
@@ -11,6 +11,12 @@ export default function InstrumentsPage() {
   const deferredQuery = useDeferredValue(query);
   const { data, isLoading } = useInstruments(deferredQuery);
   const [selected, setSelected] = useState<InstrumentWithMarket | null>(null);
+
+  useEffect(() => {
+    if (data?.data.length && !selected) {
+      setSelected(data.data[0]);
+    }
+  }, [data, selected]);
 
   return (
     <div className="flex flex-col gap-6">

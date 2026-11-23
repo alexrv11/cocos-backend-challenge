@@ -20,9 +20,9 @@ export function useInstruments(query: string) {
   return useQuery<SearchResponse>({
     queryKey: ['instruments', query],
     queryFn: async () => {
-      const res = await api.get('/instruments/search', {
-        params: { q: query, limit: 20 },
-      });
+      const params: Record<string, string | number> = { limit: 20 };
+      if (query) params.q = query;
+      const res = await api.get('/instruments/search', { params });
       return res.data;
     },
   });

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { createChart, CandlestickSeries, type IChartApi, type CandlestickData } from 'lightweight-charts';
 import { useCandles } from '../hooks/useCandles';
 import { useMarketStream } from '../hooks/useMarketStream';
@@ -18,10 +18,15 @@ export default function PriceChart({ instrumentId, basePrice, ticker }: Props) {
   const { data: candles, isLoading } = useCandles(instrumentId);
   const live = useMarketStream(instrumentId, basePrice);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
+  const initChart = useCallback((container: HTMLDivElement | null) => {
+    if (!container) return;
+    containerRef.current = container;
 
-    const chart = createChart(containerRef.current, {
+    // Avoid re-creating if already initialized
+    if (chartRef.current) return;
+
+    const chart = createChart(container, {
+      autoSize: true,
       layout: {
         background: { color: '#FFFFFF' },
         textColor: '#5B616E',
@@ -55,32 +60,26 @@ export default function PriceChart({ instrumentId, basePrice, ticker }: Props) {
 
     chartRef.current = chart;
     seriesRef.current = series;
+  }, []);
 
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        chart.applyOptions({
-          width: entry.contentRect.width,
-          height: entry.contentRect.height,
-        });
-      }
-    });
-    observer.observe(containerRef.current);
-
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
-      observer.disconnect();
-      chart.remove();
+      chartRef.current?.remove();
       chartRef.current = null;
       seriesRef.current = null;
     };
   }, []);
 
+  // Set candle data when chart and data are both ready
   useEffect(() => {
-    if (candles && seriesRef.current) {
+    if (candles?.length && seriesRef.current) {
       seriesRef.current.setData(candles as CandlestickData[]);
       chartRef.current?.timeScale().fitContent();
     }
   }, [candles]);
 
+  // Live price updates
   useEffect(() => {
     if (live && seriesRef.current && candles?.length) {
       const lastCandle = candles[candles.length - 1];
@@ -94,16 +93,21 @@ export default function PriceChart({ instrumentId, basePrice, ticker }: Props) {
     }
   }, [live, candles]);
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-3">
+        <h3 className="text-lg font-semibold">{ticker}</h3>
+        <div className="h-100 flex items-center justify-center text-text-secondary">
+          Cargando grafico...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-lg font-semibold">{ticker}</h3>
-      {isLoading ? (
-        <div className="h-[400px] flex items-center justify-center text-text-secondary">
-          Cargando grafico...
-        </div>
-      ) : (
-        <div ref={containerRef} className="h-[400px] rounded-xl border border-border overflow-hidden" />
-      )}
+      <div ref={initChart} className="h-100 rounded-xl border border-border overflow-hidden" />
     </div>
   );
 }

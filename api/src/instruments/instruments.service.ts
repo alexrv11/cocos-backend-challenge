@@ -13,10 +13,14 @@ export class InstrumentsService {
     private readonly marketDataRepo: Repository<MarketData>,
   ) {}
 
-  async search(query: string, limit?: number, offset?: number) {
-    const qb = this.instrumentRepo
-      .createQueryBuilder('i')
-      .where('i.ticker ILIKE :q OR i.name ILIKE :q', { q: `%${query}%` });
+  async search(query?: string, limit?: number, offset?: number) {
+    const qb = this.instrumentRepo.createQueryBuilder('i');
+
+    qb.where("i.type != :excluded", { excluded: 'MONEDA' });
+
+    if (query) {
+      qb.andWhere('(i.ticker ILIKE :q OR i.name ILIKE :q)', { q: `%${query}%` });
+    }
 
     const total = await qb.getCount();
 
@@ -54,5 +58,20 @@ export class InstrumentsService {
       where: { instrumentId },
       order: { date: 'DESC' },
     });
+  }
+
+  async getCandles(instrumentId: number) {
+    const rows = await this.marketDataRepo.find({
+      where: { instrumentId },
+      order: { date: 'ASC' },
+    });
+
+    return rows.map((r) => ({
+      time: typeof r.date === 'string' ? r.date : (r.date as Date).toISOString().slice(0, 10),
+      open: Number(r.open),
+      high: Number(r.high),
+      low: Number(r.low),
+      close: Number(r.close),
+    }));
   }
 }

@@ -1,6 +1,6 @@
 # Cocos Capital - Trading Platform
 
-Full-stack trading platform built as a coding challenge for Cocos Capital. Allows users to register, browse Argentine market instruments, manage a portfolio, and place buy/sell orders.
+Full-stack trading platform built as a coding challenge for Cocos Capital. Allows users to register, browse market instruments, manage a portfolio, and place buy/sell orders.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ infra/
 
 - **Node.js** >= 22
 - **Docker** & **Docker Compose**
-- **kind** (for local Kubernetes)
+- **kind** (for local Kubernetes) or **Docker Desktop** with Kubernetes enabled
 - **Terraform** >= 1.0
 - **Helm** >= 3
 - **kubectl**
@@ -43,15 +43,19 @@ docker compose up -d --build
 | user1@cocos.com    | password123   |
 | user2@cocos.com    | password123   |
 
-## Kubernetes Deployment (kind)
+## Kubernetes Deployment
 
-### 1. Create the cluster
+You can use either **kind** or **Docker Desktop** (with Kubernetes enabled) as your local cluster.
+
+### Option A: kind
+
+#### 1. Create the cluster
 
 ```bash
 kind create cluster --name finance-local --config infra/kind-config.yaml
 ```
 
-### 2. Build and load images
+#### 2. Build and load images
 
 ```bash
 # API
@@ -63,7 +67,17 @@ cd web && docker build -t cocos-web:latest . && cd ..
 kind load docker-image cocos-web:latest --name finance-local
 ```
 
-### 3. Deploy with Terraform
+### Option B: Docker Desktop
+
+Enable Kubernetes in Docker Desktop settings (Settings → Kubernetes → Enable Kubernetes). Images built locally are already available to the cluster — no need to load them.
+
+```bash
+# Build images
+cd api && docker build -t cocos-api:latest . && cd ..
+cd web && docker build -t cocos-web:latest . && cd ..
+```
+
+### Deploy with Terraform
 
 ```bash
 cd infra/terraform
@@ -75,9 +89,9 @@ This deploys:
 - **cocos** namespace with API, Web, and PostgreSQL
 - **monitoring** namespace with Prometheus + Grafana (kube-prometheus-stack)
 
-### 4. Access services
+### Access services
 
-Ports depend on your kind cluster `extraPortMappings`. Default NodePorts:
+With **kind**, ports depend on your `extraPortMappings` in `infra/kind-config.yaml`. With **Docker Desktop**, NodePorts are accessible directly on `localhost`. Default NodePorts:
 
 | Service    | NodePort | Description              |
 |------------|----------|--------------------------|
@@ -99,10 +113,11 @@ The local Kubernetes cluster is exposed via Cloudflare Tunnel:
 
 | Service    | URL                                        |
 |------------|--------------------------------------------|
-| Web + API  | https://cocos.arcadc.com                   |
+| API        | https://cocos.arcadc.com/api               |
 | Swagger    | https://cocos.arcadc.com/api/docs          |
 | Grafana    | https://grafana-cocos.arcadc.com/login     |
 | Prometheus | https://prometheus-cocos.arcadc.com        |
+| Web        | https://web-cocos.arcadc.com               |
 
 ### Grafana Credentials
 
@@ -140,6 +155,45 @@ By default, the dev server uses MSW mocks. To connect to the real API (Kubernete
 VITE_MOCK_API=false
 VITE_API_PROXY_TARGET=http://localhost:8080
 ```
+
+## Order System
+
+The platform operates in **spot mode only** — no margin or leverage. Users trade with their available cash and can only sell instruments they hold.
+
+### Creating an Order
+
+`POST /api/orders` (requires JWT)
+
+| Field            | Type     | Required | Notes                                      |
+|------------------|----------|----------|--------------------------------------------|
+| `instrumentId`   | number   | Yes      | Instrument to trade                        |
+| `side`           | string   | Yes      | `BUY` or `SELL`                            |
+| `type`           | string   | Yes      | `MARKET` or `LIMIT`                        |
+| `quantity`        | number   | *        | Number of shares (positive integer)        |
+| `totalAmount`     | number   | *        | Total ARS to invest (positive number)      |
+| `price`          | number   | **       | Required for LIMIT orders only             |
+| `idempotencyKey` | string   | No       | Prevents duplicate order processing        |
+
+> \* `quantity` and `totalAmount` are mutually exclusive — provide exactly one.
+
+### Business Rules
+
+- **BUY**: requires sufficient cash balance. Rejected if the user cannot afford the order.
+- **SELL**: requires sufficient shares in portfolio. The user can only sell instruments they currently hold (spot).
+- **MARKET orders** execute at the latest closing price from market data.
+- **LIMIT orders** are created with status `NEW` and wait for the market to match.
+- Cash balance is calculated from all `FILLED` orders: `CASH_IN - CASH_OUT - BUY + SELL`.
+- Positions are calculated from `FILLED` orders: `BUY shares - SELL shares` per instrument.
+- Concurrent orders per user are serialized via PostgreSQL advisory locks to prevent race conditions.
+
+### Order Statuses
+
+| Status      | Meaning                                                |
+|-------------|--------------------------------------------------------|
+| `FILLED`    | Executed successfully                                  |
+| `NEW`       | Limit order waiting for market match                   |
+| `REJECTED`  | Insufficient funds (buy) or insufficient shares (sell) |
+| `CANCELLED` | Cancelled by user (only `NEW` orders can be cancelled) |
 
 ## Tech Stack
 

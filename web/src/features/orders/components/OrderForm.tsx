@@ -1,18 +1,21 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { orderSchema, type OrderFormData } from '../schemas/order.schema';
 import { useCreateOrder } from '../hooks/useCreateOrder';
+import { usePortfolio } from '../../portfolio/hooks/usePortfolio';
 import type { InstrumentWithMarket } from '../../market/hooks/useInstruments';
 import InstrumentPicker from './InstrumentPicker';
 import OrderConfirmation from './OrderConfirmation';
 import Input from '../../../shared/components/Input';
 import Button from '../../../shared/components/Button';
 import { useToastStore } from '../../../shared/components/Toast';
+import { formatARS } from '../../../shared/lib/format';
 
 export default function OrderForm() {
   const [instrument, setInstrument] = useState<InstrumentWithMarket | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingData, setPendingData] = useState<OrderFormData | null>(null);
 
   const {
     register,
@@ -32,12 +35,33 @@ export default function OrderForm() {
 
   const createOrder = useCreateOrder();
   const addToast = useToastStore((s) => s.add);
-  const orderType = watch('type');
+  const { data: portfolio } = usePortfolio();
+
   const side = watch('side');
+  const orderType = watch('type');
   const quantity = watch('quantity');
   const price = watch('price');
+
   const marketPrice = instrument?.lastPrice ?? 0;
   const effectivePrice = orderType === 'MARKET' ? marketPrice : (price ?? 0);
+
+  const { heldQuantity, availableCash, orderTotal, exceedsCash, exceedsHoldings } = useMemo(() => {
+    const held = instrument
+      ? (portfolio?.positions.find((p) => p.instrumentId === instrument.id)?.quantity ?? 0)
+      : 0;
+    const cash = portfolio?.availableCash ?? 0;
+    const qty = Number.isFinite(quantity) && quantity > 0 ? quantity : 0;
+    const total = qty * effectivePrice;
+    return {
+      heldQuantity: held,
+      availableCash: cash,
+      orderTotal: total,
+      exceedsCash: side === 'BUY' && total > 0 && total > cash,
+      exceedsHoldings: side === 'SELL' && qty > 0 && qty > held,
+    };
+  }, [instrument, portfolio, quantity, effectivePrice, side]);
+
+  const canSubmit = !!instrument && !exceedsCash && !exceedsHoldings;
 
   function onSelectInstrument(inst: InstrumentWithMarket) {
     setInstrument(inst);
@@ -47,27 +71,37 @@ export default function OrderForm() {
     }
   }
 
-  function onSubmitForm() {
+  function onSubmitForm(data: OrderFormData) {
+    setPendingData(data);
     setShowConfirm(true);
   }
 
   function onConfirm() {
-    const data: OrderFormData = {
-      instrumentId: instrument!.id,
-      side: side as 'BUY' | 'SELL',
-      type: orderType as 'MARKET' | 'LIMIT',
-      quantity,
-      ...(orderType === 'LIMIT' ? { price: price! } : {}),
+    if (!pendingData) return;
+    const payload = {
+      ...pendingData,
+      ...(pendingData.type === 'MARKET' ? { price: undefined } : {}),
     };
-    createOrder.mutate(data, {
-      onSuccess: () => {
+    createOrder.mutate(payload, {
+      onSuccess: (order) => {
         setShowConfirm(false);
-        setInstrument(null);
-        reset();
-        addToast('Orden enviada exitosamente', 'success');
+        setPendingData(null);
+        if (order.status === 'REJECTED') {
+          addToast(
+            side === 'BUY'
+              ? 'Orden rechazada: fondos insuficientes'
+              : 'Orden rechazada: cantidad insuficiente',
+            'error',
+          );
+        } else {
+          setInstrument(null);
+          reset();
+          addToast('Orden enviada exitosamente', 'success');
+        }
       },
       onError: () => {
         setShowConfirm(false);
+        setPendingData(null);
         addToast('Error al enviar la orden', 'error');
       },
     });
@@ -148,16 +182,44 @@ export default function OrderForm() {
           </div>
         </div>
 
-        <Input
-          id="o-qty"
-          label="Cantidad"
-          type="number"
-          min={1}
-          step={1}
-          placeholder="Ej: 100"
-          error={errors.quantity?.message}
-          {...register('quantity', { valueAsNumber: true })}
-        />
+        <div className="flex flex-col gap-1.5">
+          <Input
+            id="o-qty"
+            label="Cantidad"
+            type="number"
+            min={1}
+            step={1}
+            max={side === 'SELL' ? heldQuantity : undefined}
+            placeholder="Ej: 100"
+            error={
+              exceedsHoldings
+                ? `No podes vender mas de ${heldQuantity} unidades`
+                : errors.quantity?.message
+            }
+            {...register('quantity', { valueAsNumber: true })}
+          />
+          {side === 'SELL' && instrument && (
+            <div className="flex items-center justify-between text-xs text-text-secondary px-1">
+              <span>
+                Disponible: <span className="font-semibold tabular-nums">{heldQuantity}</span> {instrument.ticker}
+              </span>
+              {heldQuantity > 0 && (
+                <button
+                  type="button"
+                  className="text-primary font-semibold hover:underline"
+                  onClick={() => setValue('quantity', heldQuantity)}
+                >
+                  Vender todo
+                </button>
+              )}
+            </div>
+          )}
+          {side === 'BUY' && instrument && (
+            <div className="text-xs text-text-secondary px-1">
+              Efectivo disponible: <span className="font-semibold tabular-nums">{formatARS(availableCash)}</span>
+            </div>
+          )}
+        </div>
 
         {orderType === 'LIMIT' && (
           <Input
@@ -172,32 +234,36 @@ export default function OrderForm() {
           />
         )}
 
-        {instrument && quantity > 0 && (
-          <div className="flex justify-between text-sm p-3 bg-tab-bg rounded-xl">
-            <span className="text-text-secondary">Total estimado</span>
-            <span className="font-semibold tabular-nums">
-              {new Intl.NumberFormat('es-AR', {
-                style: 'currency',
-                currency: 'ARS',
-              }).format(quantity * effectivePrice)}
-            </span>
+        {instrument && orderTotal > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex justify-between text-sm p-3 bg-tab-bg rounded-xl">
+              <span className="text-text-secondary">Total estimado</span>
+              <span className={`font-semibold tabular-nums ${exceedsCash ? 'text-danger' : ''}`}>
+                {formatARS(orderTotal)}
+              </span>
+            </div>
+            {exceedsCash && (
+              <span className="text-xs text-danger px-1">
+                Fondos insuficientes. Disponible: {formatARS(availableCash)}
+              </span>
+            )}
           </div>
         )}
 
-        <Button type="submit" disabled={!instrument}>
+        <Button type="submit" disabled={!canSubmit}>
           Revisar orden
         </Button>
       </form>
 
-      {showConfirm && instrument && (
+      {showConfirm && instrument && pendingData && (
         <OrderConfirmation
           ticker={instrument.ticker}
-          side={side as 'BUY' | 'SELL'}
-          type={orderType as 'MARKET' | 'LIMIT'}
-          quantity={quantity}
+          side={pendingData.side}
+          type={pendingData.type}
+          quantity={pendingData.quantity}
           price={effectivePrice}
           onConfirm={onConfirm}
-          onCancel={() => setShowConfirm(false)}
+          onCancel={() => { setShowConfirm(false); setPendingData(null); }}
           loading={createOrder.isPending}
         />
       )}
