@@ -92,7 +92,7 @@ resource "helm_release" "cocos_web" {
 
   set {
     name  = "api.backendUrl"
-    value = "http://${helm_release.cocos_api.name}-api:3000"
+    value = "http://${helm_release.cocos_api.name}:3000"
   }
 
   depends_on = [kubernetes_namespace.cocos, helm_release.cocos_api]

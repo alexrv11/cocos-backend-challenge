@@ -3,11 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Input from '../../../shared/components/Input';
 import Button from '../../../shared/components/Button';
 import PasswordStrength from './PasswordStrength';
-import {
-  registerSchema,
-  formatCuil,
-  type RegisterFormData,
-} from '../schemas/auth.schema';
+import { registerSchema, type RegisterFormData } from '../schemas/auth.schema';
 import { useRegister } from '../hooks/useRegister';
 
 export default function RegisterForm({ onSwitch }: { onSwitch: () => void }) {
@@ -15,7 +11,6 @@ export default function RegisterForm({ onSwitch }: { onSwitch: () => void }) {
     register,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -59,22 +54,6 @@ export default function RegisterForm({ onSwitch }: { onSwitch: () => void }) {
         autoComplete="email"
         error={errors.email?.message}
         {...register('email')}
-      />
-
-      <Input
-        id="r-cuil"
-        label="CUIL / CUIT"
-        type="text"
-        inputMode="numeric"
-        placeholder="20-12345678-9"
-        error={errors.cuil?.message}
-        {...register('cuil', {
-          onChange: (e) => {
-            setValue('cuil', formatCuil(e.target.value), {
-              shouldValidate: false,
-            });
-          },
-        })}
       />
 
       <div className="flex flex-col gap-1.5">
