@@ -8,6 +8,7 @@ import InstrumentPicker from './InstrumentPicker';
 import OrderConfirmation from './OrderConfirmation';
 import Input from '../../../shared/components/Input';
 import Button from '../../../shared/components/Button';
+import { useToastStore } from '../../../shared/components/Toast';
 
 export default function OrderForm() {
   const [instrument, setInstrument] = useState<InstrumentWithMarket | null>(null);
@@ -30,6 +31,7 @@ export default function OrderForm() {
   });
 
   const createOrder = useCreateOrder();
+  const addToast = useToastStore((s) => s.add);
   const orderType = watch('type');
   const side = watch('side');
   const quantity = watch('quantity');
@@ -62,9 +64,11 @@ export default function OrderForm() {
         setShowConfirm(false);
         setInstrument(null);
         reset();
+        addToast('Orden enviada exitosamente', 'success');
       },
       onError: () => {
         setShowConfirm(false);
+        addToast('Error al enviar la orden', 'error');
       },
     });
   }
@@ -178,19 +182,6 @@ export default function OrderForm() {
               }).format(quantity * effectivePrice)}
             </span>
           </div>
-        )}
-
-        {createOrder.error && (
-          <p className="text-sm text-danger text-center">
-            {(createOrder.error as any)?.response?.data?.message ??
-              'Error al enviar la orden'}
-          </p>
-        )}
-
-        {createOrder.isSuccess && (
-          <p className="text-sm text-success text-center font-medium">
-            Orden enviada exitosamente.
-          </p>
         )}
 
         <Button type="submit" disabled={!instrument}>

@@ -4,6 +4,7 @@ import InstrumentCard from '../components/InstrumentCard';
 import PriceChart from '../components/PriceChart';
 import OrderBook from '../components/OrderBook';
 import { useInstruments, type InstrumentWithMarket } from '../hooks/useInstruments';
+import { InstrumentCardSkeleton } from '../../../shared/components/Skeleton';
 
 export default function InstrumentsPage() {
   const [query, setQuery] = useState('');
@@ -25,8 +26,8 @@ export default function InstrumentsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-6">
         <div className="flex flex-col gap-2">
           {isLoading ? (
-            <div className="text-sm text-text-secondary py-8 text-center">
-              Cargando instrumentos...
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 6 }, (_, i) => <InstrumentCardSkeleton key={i} />)}
             </div>
           ) : data?.data.length === 0 ? (
             <div className="text-sm text-text-secondary py-8 text-center">
