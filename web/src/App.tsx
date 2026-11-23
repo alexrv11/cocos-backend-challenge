@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import AuthPage from './pages/AuthPage';
+import AuthPage from './features/auth/pages/AuthPage';
+import Layout from './shared/components/Layout';
+import ProtectedRoute from './app/ProtectedRoute';
 import DashboardPage from './pages/DashboardPage';
 import InstrumentsPage from './pages/InstrumentsPage';
 import OrderPage from './pages/OrderPage';
@@ -9,9 +11,17 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<AuthPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/instruments" element={<InstrumentsPage />} />
-        <Route path="/orders" element={<OrderPage />} />
+        <Route
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/instruments" element={<InstrumentsPage />} />
+          <Route path="/orders" element={<OrderPage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
