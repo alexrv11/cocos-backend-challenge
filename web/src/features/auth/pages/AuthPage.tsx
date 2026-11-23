@@ -18,12 +18,6 @@ export default function AuthPage() {
       <section className="flex-1 basis-[520px] min-w-0 flex flex-col p-8 md:px-12 gap-8 box-border">
         <header className="flex items-center justify-between">
           <Logo />
-          <span className="text-sm text-text-secondary">
-            Necesitas ayuda?{' '}
-            <a href="#" className="text-primary">
-              Centro de ayuda
-            </a>
-          </span>
         </header>
 
         <div className="flex-1 flex items-center justify-center">

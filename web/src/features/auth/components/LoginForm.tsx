@@ -48,9 +48,6 @@ export default function LoginForm({ onSwitch }: { onSwitch: () => void }) {
           />
           Recordarme
         </label>
-        <a href="#" className="font-semibold text-primary no-underline">
-          Olvidaste tu contrasena?
-        </a>
       </div>
 
       {login.error && (
