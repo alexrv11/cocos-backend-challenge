@@ -34,7 +34,7 @@ export default function DashboardPage() {
   }
 
   const positionsValue = data.positions.reduce(
-    (sum, p) => sum + p.quantity * p.currentPrice,
+    (sum, p) => sum + p.totalValue,
     0,
   );
 
@@ -48,8 +48,8 @@ export default function DashboardPage() {
       </div>
 
       <CashSummary
-        cashARS={data.cashARS}
-        totalValueARS={data.totalValueARS}
+        availableCash={data.availableCash}
+        totalAccountValue={data.totalAccountValue}
         positionsValue={positionsValue}
       />
 

@@ -7,14 +7,12 @@ export const authHandlers = [
     const body = (await request.json()) as { email: string; password: string };
     if (body.email === 'test@test.com' && body.password === 'Test1234') {
       return HttpResponse.json({
-        access_token: 'mock-jwt-token',
-        userId: 1,
-        email: body.email,
-        accountNumber: 'ACC-00001',
+        accessToken: 'mock-jwt-token',
+        user: { id: 1, email: body.email, accountNumber: 'ACC-00001' },
       });
     }
     return HttpResponse.json(
-      { message: 'Credenciales invalidas' },
+      { message: 'Invalid credentials' },
       { status: 401 },
     );
   }),
@@ -24,10 +22,12 @@ export const authHandlers = [
     const id = nextId++;
     return HttpResponse.json(
       {
-        access_token: 'mock-jwt-token-new',
-        userId: id,
-        email: body.email,
-        accountNumber: `ACC-${String(id).padStart(5, '0')}`,
+        accessToken: 'mock-jwt-token-new',
+        user: {
+          id,
+          email: body.email,
+          accountNumber: `ACC-${String(id).padStart(5, '0')}`,
+        },
       },
       { status: 201 },
     );

@@ -1,17 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../shared/lib/api';
 
-interface InstrumentMarketData {
-  close: number;
-  previousClose: number | null;
-}
-
 export interface InstrumentWithMarket {
   id: number;
   ticker: string;
   name: string;
   type: string;
-  marketData: InstrumentMarketData | null;
+  lastPrice: number | null;
+  previousClose: number | null;
+  dailyReturn: number | null;
 }
 
 interface SearchResponse {

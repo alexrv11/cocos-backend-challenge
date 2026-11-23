@@ -28,7 +28,7 @@ export default function InstrumentPicker({ selected, onSelect }: Props) {
           <span className="text-xs text-text-secondary truncate">{selected.name}</span>
         </div>
         <span className="text-sm font-semibold tabular-nums">
-          {selected.marketData ? formatARS(selected.marketData.close) : '—'}
+          {selected.lastPrice != null ? formatARS(selected.lastPrice) : '—'}
         </span>
       </button>
     );
@@ -65,9 +65,9 @@ export default function InstrumentPicker({ selected, onSelect }: Props) {
                 <span className="text-sm font-medium">{inst.ticker}</span>
                 <span className="text-xs text-text-secondary truncate">{inst.name}</span>
               </div>
-              {inst.marketData && (
+              {inst.lastPrice != null && (
                 <span className="text-xs tabular-nums text-text-secondary">
-                  {formatARS(inst.marketData.close)}
+                  {formatARS(inst.lastPrice)}
                 </span>
               )}
             </button>

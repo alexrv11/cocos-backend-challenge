@@ -29,8 +29,8 @@ resource "kubernetes_namespace" "cocos" {
   metadata {
     name = var.namespace
     labels = {
-      app     = "cocos-api"
-      env     = var.environment
+      app = "cocos-api"
+      env = var.environment
     }
   }
 }
@@ -63,6 +63,39 @@ resource "helm_release" "cocos_api" {
   }
 
   depends_on = [kubernetes_namespace.cocos]
+}
+
+# ---------------------------------------------------------------------------
+# Web (React SPA served by nginx)
+# ---------------------------------------------------------------------------
+resource "helm_release" "cocos_web" {
+  name             = "cocos-web"
+  namespace        = kubernetes_namespace.cocos.metadata[0].name
+  chart            = "${path.module}/../helm/cocos-web"
+  wait             = true
+  timeout          = 300
+  create_namespace = false
+
+  values = [
+    file("${path.module}/../helm/cocos-web/values.yaml")
+  ]
+
+  set {
+    name  = "image.repository"
+    value = var.web_image_repository
+  }
+
+  set {
+    name  = "image.tag"
+    value = var.web_image_tag
+  }
+
+  set {
+    name  = "api.backendUrl"
+    value = "http://${helm_release.cocos_api.name}-api:3000"
+  }
+
+  depends_on = [kubernetes_namespace.cocos, helm_release.cocos_api]
 }
 
 # ---------------------------------------------------------------------------

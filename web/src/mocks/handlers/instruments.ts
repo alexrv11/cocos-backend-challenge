@@ -21,7 +21,22 @@ export const instrumentHandlers = [
 
     const enriched = results.map((inst) => {
       const md = marketData.find((m) => m.instrumentId === inst.id);
-      return { ...inst, marketData: md ?? null };
+      const lastPrice = md?.close ?? null;
+      const previousClose = md?.previousClose ?? null;
+      const dailyReturn =
+        lastPrice != null && previousClose != null && previousClose > 0
+          ? +((((lastPrice - previousClose) / previousClose) * 100).toFixed(2))
+          : null;
+
+      return {
+        id: inst.id,
+        ticker: inst.ticker,
+        name: inst.name,
+        type: inst.type,
+        lastPrice,
+        previousClose,
+        dailyReturn,
+      };
     });
 
     return HttpResponse.json({

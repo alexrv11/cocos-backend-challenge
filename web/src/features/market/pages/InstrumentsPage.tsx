@@ -51,12 +51,12 @@ export default function InstrumentsPage() {
               <PriceChart
                 key={selected.id}
                 instrumentId={selected.id}
-                basePrice={selected.marketData?.close ?? 0}
+                basePrice={selected.lastPrice ?? 0}
                 ticker={selected.ticker}
               />
               <OrderBook
                 instrumentId={selected.id}
-                basePrice={selected.marketData?.close ?? 0}
+                basePrice={selected.lastPrice ?? 0}
                 ticker={selected.ticker}
               />
             </>

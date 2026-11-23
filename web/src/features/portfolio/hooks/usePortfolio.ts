@@ -5,16 +5,16 @@ export interface Position {
   instrumentId: number;
   ticker: string;
   name: string;
-  type: string;
   quantity: number;
-  avgPrice: number;
-  currentPrice: number;
+  lastPrice: number;
+  totalValue: number;
+  returnPercentage: number;
 }
 
 export interface Portfolio {
-  cashARS: number;
+  totalAccountValue: number;
+  availableCash: number;
   positions: Position[];
-  totalValueARS: number;
 }
 
 export function usePortfolio() {

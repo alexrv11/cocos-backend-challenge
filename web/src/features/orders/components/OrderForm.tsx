@@ -36,14 +36,14 @@ export default function OrderForm() {
   const side = watch('side');
   const quantity = watch('quantity');
   const price = watch('price');
-  const marketPrice = instrument?.marketData?.close ?? 0;
+  const marketPrice = instrument?.lastPrice ?? 0;
   const effectivePrice = orderType === 'MARKET' ? marketPrice : (price ?? 0);
 
   function onSelectInstrument(inst: InstrumentWithMarket) {
     setInstrument(inst);
     setValue('instrumentId', inst.id);
-    if (orderType === 'MARKET' && inst.marketData) {
-      setValue('price', inst.marketData.close);
+    if (orderType === 'MARKET' && inst.lastPrice != null) {
+      setValue('price', inst.lastPrice);
     }
   }
 

@@ -41,6 +41,21 @@ variable "replica_count" {
 }
 
 # ---------------------------------------------------------------------------
+# Web
+# ---------------------------------------------------------------------------
+variable "web_image_repository" {
+  description = "Docker image repository for the web client"
+  type        = string
+  default     = "cocos-web"
+}
+
+variable "web_image_tag" {
+  description = "Docker image tag for the web client"
+  type        = string
+  default     = "latest"
+}
+
+# ---------------------------------------------------------------------------
 # Prometheus + Grafana
 # ---------------------------------------------------------------------------
 variable "grafana_admin_password" {

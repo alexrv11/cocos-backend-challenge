@@ -1,5 +1,4 @@
 import type { Position } from '../hooks/usePortfolio';
-import TypeBadge from './TypeBadge';
 import { formatARS, formatPercent } from '../../../shared/lib/format';
 
 interface Props {
@@ -22,21 +21,15 @@ export default function HoldingsTable({ positions }: Props) {
           <thead>
             <tr className="bg-tab-bg text-text-secondary text-left">
               <th className="px-5 py-3 font-medium">Instrumento</th>
-              <th className="px-5 py-3 font-medium">Tipo</th>
               <th className="px-5 py-3 font-medium text-right">Cantidad</th>
-              <th className="px-5 py-3 font-medium text-right">Precio promedio</th>
-              <th className="px-5 py-3 font-medium text-right">Precio actual</th>
+              <th className="px-5 py-3 font-medium text-right">Ultimo precio</th>
               <th className="px-5 py-3 font-medium text-right">Valor</th>
-              <th className="px-5 py-3 font-medium text-right">Ganancia</th>
+              <th className="px-5 py-3 font-medium text-right">Rendimiento</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {positions.map((pos) => {
-              const value = pos.quantity * pos.currentPrice;
-              const cost = pos.quantity * pos.avgPrice;
-              const pnl = value - cost;
-              const pnlPercent = cost > 0 ? (pnl / cost) * 100 : 0;
-              const isPositive = pnl >= 0;
+              const isPositive = pos.returnPercentage >= 0;
 
               return (
                 <tr key={pos.instrumentId} className="hover:bg-tab-bg/50 transition-colors">
@@ -53,30 +46,19 @@ export default function HoldingsTable({ positions }: Props) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-4">
-                    <TypeBadge type={pos.type} />
-                  </td>
                   <td className="px-5 py-4 text-right tabular-nums font-medium">
                     {pos.quantity}
                   </td>
-                  <td className="px-5 py-4 text-right tabular-nums">
-                    {formatARS(pos.avgPrice)}
-                  </td>
                   <td className="px-5 py-4 text-right tabular-nums font-medium">
-                    {formatARS(pos.currentPrice)}
+                    {formatARS(pos.lastPrice)}
                   </td>
                   <td className="px-5 py-4 text-right tabular-nums font-semibold">
-                    {formatARS(value)}
+                    {formatARS(pos.totalValue)}
                   </td>
                   <td className="px-5 py-4 text-right">
-                    <div className="flex flex-col items-end tabular-nums">
-                      <span className={`font-semibold ${isPositive ? 'text-success' : 'text-danger'}`}>
-                        {isPositive ? '+' : ''}{formatARS(pnl)}
-                      </span>
-                      <span className={`text-xs ${isPositive ? 'text-success' : 'text-danger'}`}>
-                        {formatPercent(pnlPercent)}
-                      </span>
-                    </div>
+                    <span className={`font-semibold tabular-nums ${isPositive ? 'text-success' : 'text-danger'}`}>
+                      {formatPercent(pos.returnPercentage)}
+                    </span>
                   </td>
                 </tr>
               );

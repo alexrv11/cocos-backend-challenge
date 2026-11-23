@@ -9,14 +9,11 @@ interface Props {
 }
 
 export default function InstrumentCard({ instrument, selected, onClick }: Props) {
-  const basePrice = instrument.marketData?.close ?? null;
+  const basePrice = instrument.lastPrice;
   const live = useMarketStream(instrument.id, basePrice);
 
   const price = live?.price ?? basePrice ?? 0;
-  const prevClose = instrument.marketData?.previousClose ?? null;
-  const changePercent = prevClose
-    ? ((price - prevClose) / prevClose) * 100
-    : live?.change ?? 0;
+  const changePercent = instrument.dailyReturn ?? live?.change ?? 0;
   const isPositive = changePercent >= 0;
 
   return (

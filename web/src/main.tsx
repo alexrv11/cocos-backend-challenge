@@ -6,7 +6,7 @@ import Providers from './app/providers';
 import { useAuthStore } from './shared/hooks/useAuth';
 
 async function bootstrap() {
-  if (import.meta.env.DEV) {
+  if (import.meta.env.DEV && import.meta.env.VITE_MOCK_API !== 'false') {
     const { worker } = await import('./mocks/browser');
     await worker.start();
   }

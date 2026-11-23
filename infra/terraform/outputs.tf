@@ -14,6 +14,18 @@ output "api_url" {
   value = "http://localhost:30000"
 }
 
+output "web_release_name" {
+  value = helm_release.cocos_web.name
+}
+
+output "web_release_status" {
+  value = helm_release.cocos_web.status
+}
+
+output "web_url" {
+  value = "http://localhost:30080"
+}
+
 output "grafana_url" {
   value = "http://localhost:30300"
 }
