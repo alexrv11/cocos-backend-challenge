@@ -1,0 +1,81 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cocos-api.fullname" . }}-dashboard
+  labels:
+    {{- include "cocos-api.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  cocos-api.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "uid": "cocos-api",
+        "title": "Cocos Trading API",
+        "tags": ["cocos", "api"],
+        "timezone": "browser",
+        "refresh": "10s",
+        "time": { "from": "now-30m", "to": "now" },
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate (req/s)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+            "targets": [{ "expr": "sum(rate(http_requests_total[1m])) by (route)", "legendFormat": "{{ "{{" }}route{{ "}}" }}" }],
+            "fieldConfig": { "defaults": { "unit": "reqps" } }
+          },
+          {
+            "id": 2,
+            "title": "Latency p95/p99",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+            "targets": [
+              { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1m])) by (le, route))", "legendFormat": "p95 {{ "{{" }}route{{ "}}" }}" },
+              { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[1m])) by (le, route))", "legendFormat": "p99 {{ "{{" }}route{{ "}}" }}" }
+            ],
+            "fieldConfig": { "defaults": { "unit": "s" } }
+          },
+          {
+            "id": 3,
+            "title": "Error Rate (4xx + 5xx)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+            "targets": [{ "expr": "sum(rate(http_requests_total{status=~\"4..|5..\"}[1m])) by (status)", "legendFormat": "{{ "{{" }}status{{ "}}" }}" }],
+            "fieldConfig": { "defaults": { "unit": "reqps" } }
+          },
+          {
+            "id": 4,
+            "title": "Orders Created by Status",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+            "targets": [{ "expr": "sum(rate(orders_created_total[1m])) by (status)", "legendFormat": "{{ "{{" }}status{{ "}}" }}" }],
+            "fieldConfig": { "defaults": { "unit": "reqps" } }
+          },
+          {
+            "id": 5,
+            "title": "Auth: Login Attempts",
+            "type": "stat",
+            "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
+            "targets": [
+              { "expr": "sum(auth_login_total{result=\"success\"}) or vector(0)", "legendFormat": "Success" },
+              { "expr": "sum(auth_login_total{result=\"failure\"}) or vector(0)", "legendFormat": "Failure" }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Auth: Register Attempts",
+            "type": "stat",
+            "gridPos": { "h": 4, "w": 6, "x": 6, "y": 16 },
+            "targets": [
+              { "expr": "sum(auth_register_total{result=\"success\"}) or vector(0)", "legendFormat": "Success" },
+              { "expr": "sum(auth_register_total{result=\"failure\"}) or vector(0)", "legendFormat": "Failure" }
+            ]
+          }
+        ],
+        "schemaVersion": 39
+      },
+      "overwrite": true
+    }
+{{- end }}
