@@ -2,6 +2,7 @@ import { useState, useDeferredValue } from 'react';
 import InstrumentSearch from '../components/InstrumentSearch';
 import InstrumentCard from '../components/InstrumentCard';
 import PriceChart from '../components/PriceChart';
+import OrderBook from '../components/OrderBook';
 import { useInstruments, type InstrumentWithMarket } from '../hooks/useInstruments';
 
 export default function InstrumentsPage() {
@@ -43,14 +44,21 @@ export default function InstrumentsPage() {
           )}
         </div>
 
-        <div>
+        <div className="flex flex-col gap-6">
           {selected ? (
-            <PriceChart
-              key={selected.id}
-              instrumentId={selected.id}
-              basePrice={selected.marketData?.close ?? 0}
-              ticker={selected.ticker}
-            />
+            <>
+              <PriceChart
+                key={selected.id}
+                instrumentId={selected.id}
+                basePrice={selected.marketData?.close ?? 0}
+                ticker={selected.ticker}
+              />
+              <OrderBook
+                instrumentId={selected.id}
+                basePrice={selected.marketData?.close ?? 0}
+                ticker={selected.ticker}
+              />
+            </>
           ) : (
             <div className="h-[400px] flex items-center justify-center text-text-secondary border border-border rounded-xl">
               Selecciona un instrumento para ver el grafico.
