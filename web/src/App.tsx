@@ -4,7 +4,7 @@ import Layout from './shared/components/Layout';
 import ProtectedRoute from './app/ProtectedRoute';
 import DashboardPage from './features/portfolio/pages/DashboardPage';
 import InstrumentsPage from './features/market/pages/InstrumentsPage';
-import OrderPage from './pages/OrderPage';
+import OrderPage from './features/orders/pages/OrderPage';
 
 export default function App() {
   return (
