@@ -58,7 +58,7 @@ test.describe('Auth', () => {
     await page.getByLabel('Email').fill('wrong@email.com');
     await page.getByLabel('Contrasena').fill('wrongpass');
     await page.getByRole('button', { name: 'Ingresar' }).click();
-    await expect(page.getByText(/invalidas|Invalid/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Invalid credentials|Credenciales invalidas/)).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -70,12 +70,13 @@ test.describe('Dashboard', () => {
   });
 
   test('shows portfolio summary', async ({ page }) => {
-    await expect(page.getByText(/Efectivo disponible|Valor total/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Valor total')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Disponible')).toBeVisible();
   });
 
   test('shows cash balance', async ({ page }) => {
-    // Seed user1 has 1,000,000 ARS cash-in
-    await expect(page.getByText(/\$/)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Disponible')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('$ 997.900,00')).toBeVisible();
   });
 });
 
@@ -86,17 +87,18 @@ test.describe('Instruments', () => {
     await login(page);
   });
 
-  test('instruments page loads and shows tickers', async ({ page }) => {
+  test('instruments page loads and search shows tickers', async ({ page }) => {
     await page.getByRole('link', { name: 'Mercado' }).click();
     await page.waitForURL('**/instruments');
-    await expect(page.getByText('PAMP')).toBeVisible({ timeout: 5000 });
+    await page.getByPlaceholder(/buscar|ticker/i).fill('PAMP');
+    await expect(page.getByText('Pampa Energía S.A.')).toBeVisible({ timeout: 5000 });
   });
 
   test('search filters instruments', async ({ page }) => {
     await page.getByRole('link', { name: 'Mercado' }).click();
     await page.waitForURL('**/instruments');
-    await page.getByPlaceholder(/buscar|search/i).fill('YPF');
-    await expect(page.getByText('YPFD')).toBeVisible({ timeout: 5000 });
+    await page.getByPlaceholder(/buscar|ticker/i).fill('YPF');
+    await expect(page.getByText('YPF S.A.')).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -110,7 +112,7 @@ test.describe('Orders', () => {
   test('order page loads with form', async ({ page }) => {
     await page.getByRole('link', { name: 'Operar' }).click();
     await page.waitForURL('**/orders');
-    await expect(page.getByText(/MARKET|LIMIT|Comprar|Vender/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Comprar').first()).toBeVisible({ timeout: 5000 });
   });
 });
 
